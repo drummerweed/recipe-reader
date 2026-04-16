@@ -649,3 +649,13 @@ body {
         width: 100%;
     }
 }
+
+/* Fix for library search input box */
+.google-search-bar input#library-search-input {
+    flex-grow: 1;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    font-size: 1.1rem;
+    padding: 0.2rem 0;
+}

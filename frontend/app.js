@@ -74,7 +74,10 @@ document.addEventListener('DOMContentLoaded', () => {
         errorMsg.classList.add('hidden');
         showView(viewScrape);
     });
-    navBtnLibrary.addEventListener('click', loadLibrary);
+    navBtnLibrary.addEventListener('click', () => {
+        librarySearchInput.value = '';
+        loadLibrary();
+    });
     navBtnPantry.addEventListener('click', () => { showView(viewPantry); loadPantryCloud(); });
 
     // --- DROPDOWN ---
@@ -356,6 +359,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- LIBRARY ---
     async function loadLibrary(q = '') {
+        if (typeof q !== 'string') q = '';
         showView(viewLibrary);
         libraryEmpty.classList.add('hidden');
         libraryContent.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
