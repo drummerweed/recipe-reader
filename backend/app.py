@@ -1,20 +1,30 @@
 import os
 import re
-from ingredient_parser import parse_ingredient
 import json
+from ingredient_parser import parse_ingredient
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from scraper import scrape_recipe
 from database import db, Recipe, Ingredient, SearchWord
+from urllib.parse import urlparse, urlunparse, parse_qsl
 
 app = Flask(__name__, static_folder="/frontend", static_url_path="")
 CORS(app)
 
-# Use absolute path for DB to ensure it mounts safely if we add volumes later
-# We'll just put it in /app/recipes.db for now
-import os
-import re
-from ingredient_parser import parse_ingredient
+# ── Helpers
+
+def normalize_url(url):
+    """Remove tracking parameters from URL for consistent database lookups."""
+    if not url: return url
+    parsed = urlparse(url)
+    # List of common tracking parameters to remove
+    tracking_params = {'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'grow-social-pro', 'ref', 'source'}
+    
+    query = parse_qsl(parsed.query)
+    clean_query = [(k, v) for k, v in query if k.lower() not in tracking_params]
+    
+    # Reconstruct URL without tracking params
+    return urlunparse(parsed._replace(query="&".join([f"{k}={v}" for k, v in clean_query])))
 os.makedirs('/app/data', exist_ok=True)
 db_path = '/app/data/recipes.db'
 app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{db_path}'
@@ -76,8 +86,10 @@ def guess_category(title, tags=""):
 
 def save_recipe_to_db(data):
     """Takes the scrape dict and saves it to DB, including normalizing ingredients."""
-    # Check if already exists by URL
-    existing = Recipe.query.filter_by(source_url=data.get('source_url')).first()
+    source_url = normalize_url(data.get('source_url'))
+    
+    # Check if already exists by normalized URL
+    existing = Recipe.query.filter_by(source_url=source_url).first()
     if existing:
         return existing
 
@@ -93,7 +105,7 @@ def save_recipe_to_db(data):
         return str(val)
 
     r = Recipe(
-        source_url=data.get('source_url'),
+        source_url=source_url,
         title=title,
         image=data.get('image'),
         category=category,
@@ -107,17 +119,22 @@ def save_recipe_to_db(data):
     )
 
     
-    # Process normalized ingredients
+    # Process normalized ingredients (deduplicated)
     ing_texts = data.get('ingredients', [])
+    seen_ingredients = set()
+    
     for text in ing_texts:
         ing_text_clean = text.strip().lower()
-        if not ing_text_clean: continue
+        if not ing_text_clean or ing_text_clean in seen_ingredients: 
+            continue
         
         ingredient = Ingredient.query.filter_by(raw_text=ing_text_clean).first()
         if not ingredient:
             ingredient = Ingredient(raw_text=ing_text_clean)
             db.session.add(ingredient)
+        
         r.normalized_ingredients.append(ingredient)
+        seen_ingredients.add(ing_text_clean)
 
     db.session.add(r)
     db.session.commit()
@@ -140,7 +157,7 @@ def scrape():
     if not body or not body.get("url"):
         return jsonify({"success": False, "error": "Missing 'url' in request body."}), 400
 
-    url = body["url"].strip()
+    url = normalize_url(body["url"].strip())
     if not url.startswith(("http://", "https://")):
         return jsonify({"success": False, "error": "URL must start with http:// or https://"}), 400
 
@@ -200,7 +217,7 @@ def webhook():
     Kicks off scrape synchronously and saves it to DB immediately.
     """
     body = request.get_json(silent=True) or {}
-    url = body.get("url", "").strip()
+    url = normalize_url(body.get("url", "").strip())
     
     if not url:
         return jsonify({"success": False, "error": "Missing url."}), 400

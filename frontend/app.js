@@ -61,8 +61,18 @@ document.addEventListener('DOMContentLoaded', () => {
         view.classList.remove('hidden');
     }
 
-    navBtnNew.addEventListener('click', () => showView(viewScrape));
-    navHome.addEventListener('click', () => showView(viewScrape));
+    navBtnNew.addEventListener('click', () => {
+        urlInput.value = '';
+        errorMsg.textContent = '';
+        errorMsg.classList.add('hidden');
+        showView(viewScrape);
+    });
+    navHome.addEventListener('click', () => {
+        urlInput.value = '';
+        errorMsg.textContent = '';
+        errorMsg.classList.add('hidden');
+        showView(viewScrape);
+    });
     navBtnLibrary.addEventListener('click', loadLibrary);
     navBtnPantry.addEventListener('click', () => { showView(viewPantry); loadPantryCloud(); });
 
