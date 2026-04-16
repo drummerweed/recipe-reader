@@ -168,7 +168,16 @@ def scrape():
 @app.route("/api/recipes", methods=["GET"])
 def list_recipes():
     """List all saved recipes from the database, grouped by category."""
-    recipes = Recipe.query.order_by(Recipe.created_at.desc()).all()
+    q = request.args.get("q", "").strip()
+    
+    if q:
+        recipes = Recipe.query.filter(
+            (Recipe.title.ilike(f"%{q}%")) | 
+            (Recipe.ingredients_json.ilike(f"%{q}%"))
+        ).order_by(Recipe.created_at.desc()).all()
+    else:
+        recipes = Recipe.query.order_by(Recipe.created_at.desc()).all()
+
     grouped = {
         "Breakfast": [],
         "Lunch": [],

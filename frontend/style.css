@@ -623,3 +623,29 @@ body {
         box-sizing: border-box;
     }
 }
+
+/* Library Search Layout */
+.library-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.library-header .page-title {
+    margin-bottom: 0;
+}
+
+@media (max-width: 600px) {
+    .library-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .library-header .google-search-container {
+        max-width: 100% !important;
+        width: 100%;
+    }
+}

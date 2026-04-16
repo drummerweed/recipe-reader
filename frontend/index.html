@@ -91,7 +91,15 @@
 
         <!-- View: Recipe Library -->
         <div id="view-library" class="view-section hidden no-print">
-            <h1 class="page-title">My Recipes</h1>
+            <div class="library-header">
+                <h1 class="page-title">My Recipes</h1>
+                <div class="google-search-container" style="margin: 0; max-width: 400px;">
+                    <div class="google-search-bar">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="library-search-input" placeholder="Search title or ingredients..." autocomplete="off">
+                    </div>
+                </div>
+            </div>
             
             <div id="library-empty" class="hidden">
                 <p class="empty-state">No recipes saved yet. Go add one!</p>

@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Library
     const libraryEmpty = document.getElementById('library-empty');
     const libraryContent = document.getElementById('library-content');
+    const librarySearchInput = document.getElementById('library-search-input');
 
     // State
     let currentScrapedRecipe = null;
@@ -354,13 +355,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- LIBRARY ---
-    async function loadLibrary() {
+    async function loadLibrary(q = '') {
         showView(viewLibrary);
         libraryEmpty.classList.add('hidden');
         libraryContent.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
         try {
-            const res = await fetch('/api/recipes');
+            const url = q ? `/api/recipes?q=${encodeURIComponent(q)}` : '/api/recipes';
+            const res = await fetch(url);
             const data = await res.json();
 
             let hasAny = false;
@@ -414,6 +416,16 @@ document.addEventListener('DOMContentLoaded', () => {
             libraryContent.innerHTML = `<div class="error">Failed to load library: ${err.message}</div>`;
         }
     }
+
+    // --- LIBRARY SEARCH ---
+    let librarySearchTimeout = null;
+    librarySearchInput.addEventListener('input', (e) => {
+        const q = e.target.value.trim();
+        clearTimeout(librarySearchTimeout);
+        librarySearchTimeout = setTimeout(() => {
+            loadLibrary(q);
+        }, 300);
+    });
 
     async function viewSavedRecipe(id) {
         showView(viewScrape); // Show skeleton while loading
