@@ -1,0 +1,12 @@
+flask==3.0.3
+flask-cors==4.0.1
+recipe-scrapers==14.55.0
+requests==2.32.3
+extruct==0.17.0
+gunicorn==22.0.0
+playwright==1.44.0
+playwright-stealth==1.0.6
+Flask-SQLAlchemy==3.1.1
+
+ingredient-parser-nlp
+nltk

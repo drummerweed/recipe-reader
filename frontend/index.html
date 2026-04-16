@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Reader</title>
+    <!-- Light theme, modern sans-serif like Notion uses Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍳</text></svg>">
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <!-- Top Navigation Bar -->
+    <nav class="navbar no-print">
+        <div class="nav-brand" id="nav-home">
+            <span class="icon">🍳</span> Recipe Reader
+        </div>
+        <div class="nav-links">
+            <button id="nav-btn-library" class="nav-btn">Library</button>
+            <button id="nav-btn-pantry" class="nav-btn">Pantry</button>
+            <button id="nav-btn-new" class="nav-btn primary-btn">+ New</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        
+        <!-- View: Scrape New Recipe -->
+        <div id="view-scrape" class="view-section">
+            <header class="search-section no-print">
+                <h1 class="page-title">Save a Recipe</h1>
+                <p class="subtitle">Skip the life story, ads, and pop-ups. Just get the recipe.</p>
+                <form id="scrape-form" class="search-form">
+                    <input type="url" id="url-input" placeholder="Paste recipe URL here..." required>
+                    <button type="submit" id="submit-btn" class="primary-btn">Go</button>
+                </form>
+                <div id="error-message" class="error hidden"></div>
+            </header>
+
+            <div id="loading" class="loading hidden no-print">
+                <div class="spinner"></div>
+                <p>Extracting just the recipe...</p>
+            </div>
+        </div>
+
+        
+        <!-- View: Pantry Search -->
+        <div id="view-pantry" class="view-section hidden no-print">
+            <header class="search-section" style="max-width: 100%;">
+                <div class="pantry-split-layout">
+                    <!-- Left: Search Area -->
+                    <div class="pantry-main-column">
+                        <h1 class="page-title">Pantry Search</h1>
+                        <p class="subtitle">Enter what's in your kitchen to see what you can make.</p>
+                        <div class="search-form" style="flex-direction: column; align-items: flex-start;">
+                            <div class="google-search-container" style="margin: 0; max-width: 100%;">
+                                <div class="google-search-bar">
+                                    <span class="search-icon">🔍</span>
+                                    <input type="text" id="pantry-input" placeholder="Add ingredient..." autocomplete="off">
+                                </div>
+                                <ul id="pantry-suggestions" class="suggestions-dropdown hidden"></ul>
+                            </div>
+                            <div id="pantry-tags" class="pantry-tags"></div>
+                            <button type="button" id="pantry-search-btn" class="primary-btn" style="align-self: flex-start; margin-top: 1rem;">Find Recipes</button>
+                            <div id="pantry-loading" class="loading hidden">
+                                <div class="spinner"></div>
+                                <p>Raiding the pantry...</p>
+                            </div>
+                            <div id="pantry-error" class="error hidden"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Right: Word Cloud -->
+                    <div class="pantry-cloud-column">
+                        <h3 class="cloud-title">Common Ingredients</h3>
+                        <div id="pantry-cloud" class="pantry-tags cloud-tags">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <div id="pantry-results" class="recipe-grid">
+                <!-- Populated via JS -->
+            </div>
+            <div id="pantry-empty" class="hidden">
+                <p class="empty-state">No recipes match your incredibly bare pantry. Try adding more items!</p>
+            </div>
+        </div>
+
+        <!-- View: Recipe Library -->
+        <div id="view-library" class="view-section hidden no-print">
+            <h1 class="page-title">My Recipes</h1>
+            
+            <div id="library-empty" class="hidden">
+                <p class="empty-state">No recipes saved yet. Go add one!</p>
+            </div>
+
+            <div id="library-content">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+
+        <!-- View: Recipe Content Reader -->
+        <main id="view-reader" class="view-section hidden">
+            <!-- Action bar dropdown -->
+            <div class="action-bar no-print">
+                <div class="dropdown">
+                    <button class="dropdown-toggle" id="action-menu-btn">⋮ Actions</button>
+                    <div class="dropdown-menu">
+                        <button id="action-save" class="dropdown-item">💾 Save to Library</button>
+                        <button id="action-print" class="dropdown-item">🖨️ Print Recipe</button>
+                        <a id="action-source" href="#" target="_blank" class="dropdown-item">🔗 View Original</a>
+                        <button id="action-delete" class="dropdown-item danger-item hidden">🗑️ Delete</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Single Recipe Display -->
+            <div class="recipe-reader-card">
+                <div class="recipe-header">
+                    <div class="image-container" id="recipe-image-container">
+                        <img id="recipe-image" src="" alt="Recipe Image">
+                    </div>
+                    <div class="recipe-title-meta">
+                        <h1 id="recipe-title">Recipe Title</h1>
+                        <p id="recipe-description" class="description"></p>
+                        
+                        <div class="recipe-meta">
+                            <div class="meta-item" id="meta-yields-container">
+                                <span class="meta-label">Yields</span>
+                                <span class="meta-value" id="recipe-yields"></span>
+                            </div>
+                            <div class="meta-item" id="meta-prep-container">
+                                <span class="meta-label">Prep Time</span>
+                                <span class="meta-value" id="recipe-prep"></span>
+                            </div>
+                            <div class="meta-item" id="meta-cook-container">
+                                <span class="meta-label">Cook Time</span>
+                                <span class="meta-value" id="recipe-cook"></span>
+                            </div>
+                            <div class="meta-item" id="meta-total-container">
+                                <span class="meta-label">Total Time</span>
+                                <span class="meta-value" id="recipe-total"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="recipe-body">
+                    <section class="ingredients-section">
+                        <h2>Ingredients</h2>
+                        <ul id="recipe-ingredients" class="ingredients-list">
+                        </ul>
+                    </section>
+
+                    <section class="instructions-section">
+                        <h2>Instructions</h2>
+                        <ol id="recipe-instructions" class="instructions-list">
+                        </ol>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>

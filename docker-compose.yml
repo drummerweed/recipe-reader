@@ -1,0 +1,15 @@
+services:
+  recipe-reader:
+    container_name: recipe-reader
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8282:5000"
+    volumes:
+      - ./frontend:/frontend:ro
+      - ./recipes_data:/app/data
+    shm_size: '1gb'
+    restart: unless-stopped
+    environment:
+      TZ: 'America/Los_Angeles'
