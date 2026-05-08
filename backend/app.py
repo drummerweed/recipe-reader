@@ -81,8 +81,11 @@ def guess_category(title, tags=""):
         return "Snacks"
     if "lunch" in text or "sandwich" in text or "wrap" in text or "salad" in text:
         return "Lunch"
-    # Default to Dinner
-    return "Dinner"
+    if "dinner" in text or "roast" in text or "casserole" in text or "pasta" in text or "pizza" in text or "steak" in text or "chicken" in text or "beef" in text or "pork" in text or "fish" in text:
+        return "Dinner"
+
+    # Default to Lunch
+    return "Lunch"
 
 def save_recipe_to_db(data):
     """Takes the scrape dict and saves it to DB, including normalizing ingredients."""
@@ -95,8 +98,8 @@ def save_recipe_to_db(data):
 
     title = data.get('title', 'Untitled Recipe')
     
-    # Attempt to pull tags if our scraper caught them eventually, else just title
-    category = guess_category(title, "")
+    # Use provided category if present, else attempt to pull tags or guess
+    category = data.get('category') or guess_category(title, "")
 
 
     def to_str(val):
@@ -119,6 +122,8 @@ def save_recipe_to_db(data):
     )
 
     
+    db.session.add(r)
+    
     # Process normalized ingredients (deduplicated)
     ing_texts = data.get('ingredients', [])
     seen_ingredients = set()
@@ -133,10 +138,10 @@ def save_recipe_to_db(data):
             ingredient = Ingredient(raw_text=ing_text_clean)
             db.session.add(ingredient)
         
+        # Now r is in session, appending works cleanly
         r.normalized_ingredients.append(ingredient)
         seen_ingredients.add(ing_text_clean)
 
-    db.session.add(r)
     db.session.commit()
     return r
 
@@ -162,6 +167,8 @@ def scrape():
         return jsonify({"success": False, "error": "URL must start with http:// or https://"}), 400
 
     result = scrape_recipe(url)
+    if result.get("success") and "title" in result:
+        result["category"] = guess_category(result["title"], "")
     status_code = 200 if result.get("success") else 422
     return jsonify(result), status_code
 
@@ -195,7 +202,7 @@ def list_recipes():
         })
     return jsonify({"success": True, "categories": grouped})
 
-@app.route("/api/recipes/<int:recipe_id>", methods=["GET", "DELETE"])
+@app.route("/api/recipes/<int:recipe_id>", methods=["GET", "DELETE", "PATCH"])
 def get_or_delete_recipe(recipe_id):
     r = Recipe.query.get(recipe_id)
     if not r:
@@ -205,6 +212,13 @@ def get_or_delete_recipe(recipe_id):
         db.session.delete(r)
         db.session.commit()
         return jsonify({"success": True})
+        
+    if request.method == "PATCH":
+        body = request.get_json(silent=True) or {}
+        if "category" in body:
+            r.category = body["category"]
+            db.session.commit()
+        return jsonify({"success": True, "recipe": r.to_dict()})
         
     return jsonify({"success": True, "recipe": r.to_dict()})
 
@@ -250,17 +264,22 @@ def pantry_suggest():
     if not q or len(q) < 2:
         return jsonify({"success": True, "suggestions": []})
         
-    ings = Ingredient.query.filter(Ingredient.raw_text.like(f"%{q}%")).limit(100).all()
+    ings = Ingredient.query.filter(Ingredient.raw_text.ilike(f"%{q}%")).limit(50).all()
     suggestions = set()
     
     for ing in ings:
+        # Each ing.raw_text is something like "2 cups all-purpose flour"
+        # Instead of parsing everything, let's just look for the query word 
+        # but try to keep it meaningful. 
+        # We can use a simpler regex for suggestion variety if parsing is too slow.
         try:
             parsed = parse_ingredient(ing.raw_text)
             if parsed.name:
                 for obj in parsed.name:
                     if hasattr(obj, 'text'):
                         name_val = obj.text.lower()
-                        words = re.findall(r'[a-z0-9-]+', name_val.lower())
+                        # Tokenize and filter
+                        words = re.findall(r'[a-z0-9-]+', name_val)
                         clean_words = [w for w in words if w not in STOP_WORDS]
                         if not clean_words: continue
                         
@@ -271,7 +290,7 @@ def pantry_suggest():
         except:
             pass
                 
-    # Sort by length. The shortest word containing the query is usually the most generic.
+    # Sort by length and return top 10
     sug_list = sorted(list(suggestions), key=len)[:10]
     return jsonify({"success": True, "suggestions": sug_list})
 
@@ -280,33 +299,31 @@ def pantry_suggest():
 def pantry_cloud():
     cloud_frequencies = {}
 
-    # Gather automated counts from recipes
-    recipes_db = Recipe.query.all()
-    for r in recipes_db:
+    # Use already normalized ingredients from the database
+    # This is 100x faster than re-parsing everything on every request
+    all_ingredients = Ingredient.query.all()
+    for ing in all_ingredients:
         try:
-            raw_ingredients = json.loads(r.ingredients_json)
-        except:
-            raw_ingredients = []
-            
-        for raw_ing in raw_ingredients:
-            try:
-                parsed = parse_ingredient(raw_ing)
-                if parsed.name:
-                    for obj in parsed.name:
-                        if hasattr(obj, 'text'):
-                            name_val = obj.text.lower()
-                            # Clean stop words out of the parsed phrase (e.g. "fresh bay leaf" -> "bay leaf")
-                            words = re.findall(r'[a-z0-9-]+', name_val.lower())
-                            clean_words = [w for w in words if w not in STOP_WORDS]
-                            if not clean_words: continue
-                            
-                            phrase = " ".join(clean_words).strip()
-                            phrase_sing = to_singular(phrase)
-                            
-                            if len(phrase_sing) > 2:
-                                cloud_frequencies[phrase_sing] = cloud_frequencies.get(phrase_sing, 0) + 1
-            except Exception as e:
-                pass
+            # Check how many recipes use this ingredient
+            usage_count = len(ing.recipes)
+            if usage_count == 0: continue
+
+            parsed = parse_ingredient(ing.raw_text)
+            if parsed.name:
+                for obj in parsed.name:
+                    if hasattr(obj, 'text'):
+                        name_val = obj.text.lower()
+                        words = re.findall(r'[a-z0-9-]+', name_val)
+                        clean_words = [w for w in words if w not in STOP_WORDS]
+                        if not clean_words: continue
+                        
+                        phrase = " ".join(clean_words).strip()
+                        phrase_sing = to_singular(phrase)
+                        
+                        if len(phrase_sing) > 2:
+                            cloud_frequencies[phrase_sing] = cloud_frequencies.get(phrase_sing, 0) + usage_count
+        except Exception as e:
+            pass
 
     # Gather manual search additions (> 5 limit constraint set by user)
     manual_searches = SearchWord.query.filter(SearchWord.count > 5).all()
@@ -332,22 +349,30 @@ def pantry_search():
     
     pantry_items = [to_singular(p.lower().strip()) for p in body["pantry"] if p.strip()]
     
+    # Pre-tokenize pantry items for faster matching
+    pantry_token_sets = []
+    for item in pantry_items:
+        tokens = set(re.findall(r'[a-z0-9-]+', item))
+        if tokens:
+            pantry_token_sets.append(tokens)
+
     # Log manual queries
     for item in pantry_items:
-        sw = SearchWord.query.filter_by(word=item).first()
-        if sw:
-            sw.count += 1
-        else:
-            sw = SearchWord(word=item, count=1)
-            db.session.add(sw)
+        try:
+            sw = SearchWord.query.filter_by(word=item).first()
+            if sw:
+                sw.count += 1
+            else:
+                sw = SearchWord(word=item, count=1)
+                db.session.add(sw)
+        except:
+            pass
     db.session.commit()
 
-    
     recipes_db = Recipe.query.all()
     results = []
     
     for r in recipes_db:
-        # Load raw ingredients
         try:
             raw_ingredients = json.loads(r.ingredients_json)
         except:
@@ -355,21 +380,32 @@ def pantry_search():
             
         missing_count = 0
         missing_ingredients = []
+        matched_ingredients_count = 0
         
         for raw_ing in raw_ingredients:
             raw_ing_clean = raw_ing.lower()
+            ing_tokens = set(re.findall(r'[a-z0-9-]+', raw_ing_clean))
+            
             found = False
-            for p_item in pantry_items:
-                if p_item in raw_ing_clean:
+            for p_tokens in pantry_token_sets:
+                # Check if ALL tokens of a pantry item are present in the ingredient
+                # e.g. if pantry has {"garlic", "powder"}, does the ingredient have both?
+                if p_tokens.issubset(ing_tokens):
+                    found = True
+                    break
+                # Fallback to simple substring for edge cases (like "all-purpose")
+                p_phrase = " ".join(p_tokens)
+                if p_phrase in raw_ing_clean:
                     found = True
                     break
             
-            if not found:
+            if found:
+                matched_ingredients_count += 1
+            else:
                 missing_count += 1
                 missing_ingredients.append(raw_ing)
                 
-        matched_count = len(raw_ingredients) - missing_count
-        if matched_count > 0:
+        if matched_ingredients_count > 0:
             results.append({
                 "id": r.id,
                 "title": r.title,

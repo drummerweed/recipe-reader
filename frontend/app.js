@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const actionDelete = document.getElementById('action-delete');
 
     // Reader Elements
+    const elCategory = document.getElementById('recipe-category');
+    const elCategorySavedMsg = document.getElementById('category-saved-msg');
     const elTitle = document.getElementById('recipe-title');
     const elDesc = document.getElementById('recipe-description');
     const elSysImageContainer = document.getElementById('recipe-image-container');
@@ -43,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const listIngredients = document.getElementById('recipe-ingredients');
     const listInstructions = document.getElementById('recipe-instructions');
+    const btnConvertUnits = document.getElementById('convert-units-btn');
 
     // Library
     const libraryEmpty = document.getElementById('library-empty');
@@ -52,6 +55,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // State
     let currentScrapedRecipe = null;
     let currentViewedId = null; 
+    let currentOriginalIngredients = [];
+    let unitState = 'original'; // 'original', 'metric', 'imperial'
 
     // --- NAVIGATION ---
     function showView(view) {
@@ -274,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
         pantryError.classList.add('hidden');
         pantryEmpty.classList.add('hidden');
         pantryResults.innerHTML = '';
+        pantryLoading.querySelector('p').textContent = 'Finding recipes with ' + pantryItems.join(', ') + '...';
         pantryLoading.classList.remove('hidden');
         pantrySearchBtn.disabled = true;
 
@@ -287,17 +293,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             pantryLoading.classList.add('hidden');
             
-            if (!data.success) throw new Error(data.error);
+            if (!data.success) throw new Error(data.error || "Unknown search error");
             
             if (data.results.length === 0) {
+                pantryEmpty.querySelector('.empty-state').textContent = `No recipes match "${pantryItems.join(', ')}". Try adding more items!`;
                 pantryEmpty.classList.remove('hidden');
             } else {
+                pantryEmpty.classList.add('hidden');
                 let html = '';
                 data.results.forEach(r => {
                     const img = r.image ? `<img src="${r.image}" class="lib-image">` : `<div class="lib-image"></div>`;
                     const time = r.total_time ? `<div class="lib-time">⏱️ ${r.total_time}</div>` : '';
                     const badgeStr = r.missing_count === 0 ? 'Perfect match!' : `Missing ${r.missing_count}`;
-                    const badgeClass = r.missing_count === 0 ? 'missing-badge' : 'missing-badge'; // Can style differently later
+                    const badgeClass = r.missing_count === 0 ? 'missing-badge perfect-match' : 'missing-badge';
                     
                     html += `
                         <a href="#" class="library-card" data-id="${r.id}">
@@ -372,15 +380,22 @@ document.addEventListener('DOMContentLoaded', () => {
             let hasAny = false;
             let html = '';
 
-            // Render categories
+            let tabsHtml = '<div class="library-tabs">';
+            let contentHtml = '';
+            let firstTab = true;
+
             const order = ["Breakfast", "Lunch", "Dinner", "Snacks"];
             order.forEach(cat => {
                 const recipes = data.categories[cat];
                 if (recipes && recipes.length > 0) {
                     hasAny = true;
-                    html += `
-                        <div class="category-section">
-                            <h2 class="category-title">${cat}</h2>
+                    
+                    const activeClass = firstTab ? 'active' : '';
+                    tabsHtml += `<button class="tab-btn ${activeClass}" data-tab="${cat}">${cat}</button>`;
+                    
+                    const hiddenClass = firstTab ? '' : 'hidden';
+                    contentHtml += `
+                        <div class="category-section tab-content ${hiddenClass}" id="tab-${cat}">
                             <div class="recipe-grid">
                     `;
                     recipes.forEach(r => {
@@ -396,15 +411,37 @@ document.addEventListener('DOMContentLoaded', () => {
                             </a>
                         `;
                     });
-                    html += `</div></div>`;
+                    contentHtml += html;
+                    html = ''; // clear for next tab
+                    contentHtml += `</div></div>`;
+                    
+                    firstTab = false;
                 }
             });
+            tabsHtml += '</div>';
 
             if (!hasAny) {
                 libraryContent.innerHTML = '';
                 libraryEmpty.classList.remove('hidden');
+                if (q) {
+                    libraryEmpty.querySelector('.empty-state').textContent = `No recipes match "${q}".`;
+                } else {
+                    libraryEmpty.querySelector('.empty-state').textContent = "No recipes saved yet. Go add one!";
+                }
             } else {
-                libraryContent.innerHTML = html;
+                libraryContent.innerHTML = tabsHtml + contentHtml;
+                
+                // Add click events to tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                        document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                        
+                        e.target.classList.add('active');
+                        const targetTab = e.target.getAttribute('data-tab');
+                        document.getElementById(`tab-${targetTab}`).classList.remove('hidden');
+                    });
+                });
                 
                 // Add click events to cards
                 document.querySelectorAll('.library-card').forEach(card => {
@@ -499,6 +536,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function populateRecipeReader(data) {
         actionSource.href = data.source_url;
 
+        elCategory.value = data.category || "Lunch";
         elTitle.textContent = data.title || "Recipe";
         
         if (data.description) {
@@ -521,14 +559,11 @@ document.addEventListener('DOMContentLoaded', () => {
         setMeta(wrapCook, elCook, data.cook_time);
         setMeta(wrapTotal, elTotal, data.total_time);
 
-        listIngredients.innerHTML = '';
-        if (data.ingredients && data.ingredients.length > 0) {
-            data.ingredients.forEach(ing => {
-                const li = document.createElement('li');
-                li.textContent = ing;
-                listIngredients.appendChild(li);
-            });
-        }
+        currentOriginalIngredients = data.ingredients || [];
+        unitState = 'original';
+        btnConvertUnits.textContent = 'Units: Original';
+        
+        renderIngredientsList(currentOriginalIngredients);
 
         listInstructions.innerHTML = '';
         if (data.instructions && data.instructions.length > 0) {
@@ -548,4 +583,129 @@ document.addEventListener('DOMContentLoaded', () => {
             container.classList.add('hidden');
         }
     }
+
+    // --- CATEGORY UPDATES ---
+    elCategory.addEventListener('change', async (e) => {
+        const newCategory = e.target.value;
+        let success = false;
+        
+        if (currentViewedId) {
+            try {
+                const res = await fetch(`/api/recipes/${currentViewedId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category: newCategory })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    success = true;
+                } else {
+                    console.error("Failed to update category", data.error);
+                }
+            } catch (err) {
+                console.error("Failed to update category", err);
+            }
+        } else if (currentScrapedRecipe) {
+            currentScrapedRecipe.category = newCategory;
+            success = true; // Memory update success
+        }
+        
+        if (success) {
+            elCategorySavedMsg.style.opacity = '1';
+            setTimeout(() => {
+                elCategorySavedMsg.style.opacity = '0';
+            }, 2000);
+        }
+    });
+
+    // --- UNIT CONVERSION ---
+    function renderIngredientsList(ings) {
+        listIngredients.innerHTML = '';
+        ings.forEach(ing => {
+            const li = document.createElement('li');
+            li.textContent = ing;
+            listIngredients.appendChild(li);
+        });
+    }
+
+    function parseAndConvertValue(strValue, rate) {
+        let parts = strValue.trim().split(' ');
+        let decimal = 0;
+        if (parts.length === 2 && parts[1].includes('/')) {
+            let [num, den] = parts[1].split('/');
+            decimal = parseFloat(parts[0]) + (parseFloat(num)/parseFloat(den));
+        } else if (parts.length === 1 && parts[0].includes('/')) {
+            let [num, den] = parts[0].split('/');
+            decimal = parseFloat(num)/parseFloat(den);
+        } else {
+            decimal = parseFloat(strValue);
+        }
+        if (isNaN(decimal)) return strValue;
+        
+        let converted = decimal * rate;
+        // Keep to at most 2 decimal places to avoid noisy fractions, strip trailing zero decimals 
+        return (Math.round(converted * 100) / 100).toString();
+    }
+
+    function convertIngredientsText(ingredients, targetSystem) {
+        const metricToImperial = [
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(g|gram|grams)\b/gi, rate: 1/28.35, unit: 'oz' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(kg|kilo|kilogram|kilograms)\b/gi, rate: 2.205, unit: 'lb' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(ml|milliliter|milliliters)\b/gi, rate: 1/29.57, unit: 'fl oz' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(l|liter|liters)\b/gi, rate: 1.057, unit: 'qt' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(c(elsius)?)\b/gi, rate: 'C2F', unit: 'F' }
+        ];
+        
+        const imperialToMetric = [
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(oz|ounce|ounces)\b/gi, rate: 28.35, unit: 'g' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(lb|lbs|pound|pounds)\b/gi, rate: 0.4535, unit: 'kg' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(fl oz|fluid ounce|fluid ounces)\b/gi, rate: 29.57, unit: 'ml' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(cup|cups)\b/gi, rate: 240, unit: 'ml' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(tbsp|tablespoon|tablespoons)\b/gi, rate: 15, unit: 'ml' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(tsp|teaspoon|teaspoons)\b/gi, rate: 5, unit: 'ml' },
+            { regex: /(?<!\d\s)([\d\s\.\/]+)\s*(f(ahrenheit)?)\b/gi, rate: 'F2C', unit: 'C' }
+        ];
+
+        const rules = targetSystem === 'metric' ? imperialToMetric : metricToImperial;
+
+        return ingredients.map(ing => {
+            let newIng = ing;
+            for (let rule of rules) {
+                newIng = newIng.replace(rule.regex, (match, valStr, unitStr) => {
+                    let converted;
+                    if (rule.rate === 'F2C') {
+                        let c = (parseFloat(valStr) - 32) * 5/9;
+                        converted = Math.round(c);
+                    } else if (rule.rate === 'C2F') {
+                        let f = (parseFloat(valStr) * 9/5) + 32;
+                        converted = Math.round(f);
+                    } else {
+                        converted = parseAndConvertValue(valStr, rule.rate);
+                    }
+                    if (converted === valStr) return match;
+                    return `${converted} ${rule.unit}`;
+                });
+            }
+            return newIng;
+        });
+    }
+
+    btnConvertUnits.addEventListener('click', () => {
+        if (!currentOriginalIngredients || currentOriginalIngredients.length === 0) return;
+        
+        if (unitState === 'original') {
+            unitState = 'metric';
+            btnConvertUnits.textContent = 'Units: Metric';
+            renderIngredientsList(convertIngredientsText(currentOriginalIngredients, 'metric'));
+        } else if (unitState === 'metric') {
+            unitState = 'imperial';
+            btnConvertUnits.textContent = 'Units: Imperial';
+            renderIngredientsList(convertIngredientsText(currentOriginalIngredients, 'imperial'));
+        } else {
+            unitState = 'original';
+            btnConvertUnits.textContent = 'Units: Original';
+            renderIngredientsList(currentOriginalIngredients);
+        }
+    });
+
 });

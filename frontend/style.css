@@ -515,6 +515,11 @@ body {
     font-weight: 600;
     z-index: 10;
 }
+.missing-badge.perfect-match {
+    background-color: #e4ffe4;
+    color: #2e7d32;
+    border: 1px solid rgba(46, 125, 50, 0.2);
+}
 .library-card { position: relative; } /* Ensure positioning for badge */
 
 /* --- Google Search Bar --- */
@@ -586,15 +591,20 @@ body {
     text-align: left;
 }
 .pantry-main-column {
-    flex: 1.5;
+    flex: 1;
 }
 .pantry-cloud-column {
-    flex: 1;
+    flex: 1.2;
     background: var(--surface-color);
     padding: 1.5rem;
     border-radius: 12px;
     border: 1px solid var(--border-color);
 }
+.cloud-tags {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
 .cloud-title {
     margin-top: 0;
     margin-bottom: 1rem;
@@ -622,6 +632,34 @@ body {
         width: 100%;
         box-sizing: border-box;
     }
+}
+
+/* Library Tabs */
+.library-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.tab-btn {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+    font-family: var(--font-sans);
+}
+.tab-btn:hover {
+    color: var(--text-primary);
+}
+.tab-btn.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
 }
 
 /* Library Search Layout */
