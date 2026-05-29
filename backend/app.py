@@ -1,11 +1,12 @@
 import os
 import re
 import json
+import requests
 from ingredient_parser import parse_ingredient
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from scraper import scrape_recipe
-from database import db, Recipe, Ingredient, SearchWord
+from database import db, Recipe, Ingredient, SearchWord, Settings
 from urllib.parse import urlparse, urlunparse, parse_qsl
 
 app = Flask(__name__, static_folder="/frontend", static_url_path="")
@@ -252,9 +253,70 @@ def webhook():
     r = save_recipe_to_db(result)
     return jsonify({"success": True, "id": r.id, "title": r.title, "message": "Scraped and saved!"})
 
+@app.route("/api/settings", methods=["GET", "POST"])
+def manage_settings():
+    setting = Settings.query.first()
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        if not setting:
+            setting = Settings()
+            db.session.add(setting)
+        
+        if "notion_token" in body:
+            setting.notion_token = body["notion_token"]
+        if "notion_db_url" in body:
+            setting.notion_db_url = body["notion_db_url"]
+            
+        db.session.commit()
+        return jsonify({"success": True})
+        
+    return jsonify({
+        "success": True,
+        "notion_token": setting.notion_token if setting else "",
+        "notion_db_url": setting.notion_db_url if setting else ""
+    })
 
+def extract_notion_db_id(url):
+    import re
+    match = re.search(r'([a-f0-9]{32})', url.replace('-', ''))
+    if match:
+        return match.group(1)
+    return None
 
-
+@app.route("/api/recipes/<int:recipe_id>/notion", methods=["POST"])
+def save_to_notion(recipe_id):
+    r = Recipe.query.get(recipe_id)
+    if not r:
+        return jsonify({"success": False, "error": "Recipe not found"}), 404
+        
+    setting = Settings.query.first()
+    if not setting or not setting.notion_token or not setting.notion_db_url:
+        return jsonify({"success": False, "error": "Notion settings not configured"}), 400
+        
+    db_id = extract_notion_db_id(setting.notion_db_url)
+    if not db_id:
+        return jsonify({"success": False, "error": "Invalid Notion Database URL"}), 400
+        
+    headers = {
+        "Authorization": f"Bearer {setting.notion_token}",
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28"
+    }
+    
+    data = {
+        "parent": { "database_id": db_id },
+        "properties": {
+            "Name": { "title": [ { "text": { "content": r.title } } ] },
+            "URL": { "url": r.source_url }
+        }
+    }
+    
+    resp = requests.post("https://api.notion.com/v1/pages", headers=headers, json=data)
+    if resp.status_code == 200:
+        return jsonify({"success": True})
+    else:
+        err = resp.json().get('message', resp.text)
+        return jsonify({"success": False, "error": err}), 400
 
 
 @app.route("/api/pantry/suggest", methods=["GET"])

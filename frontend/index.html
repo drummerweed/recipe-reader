@@ -4,33 +4,55 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recipe Reader</title>
-    <!-- Light theme, modern sans-serif like Notion uses Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <!-- Light theme -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍳</text></svg>">
     <link rel="stylesheet" href="/style.css?v=6">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
+<body class="bg-gray-50 min-h-screen flex flex-col">
     <!-- Top Navigation Bar -->
-    <nav class="navbar no-print">
-        <div class="nav-brand" id="nav-home">
-            <span class="icon">🍳</span> Recipe Reader
-        </div>
-        <div class="nav-links">
-            <button id="nav-btn-library" class="nav-btn">Library</button>
-            <button id="nav-btn-pantry" class="nav-btn">Pantry</button>
-            <button id="nav-btn-new" class="nav-btn primary-btn">+ New</button>
+    <nav class="bg-white border-b border-gray-100 p-4 mb-8">
+        <div class="container mx-auto flex justify-between items-center max-w-4xl">
+            <div class="flex items-center space-x-2 cursor-pointer" id="nav-home">
+                <div class="h-8 w-8 rounded-lg flex items-center justify-center bg-white border border-gray-100 shadow-sm text-xl">🍳</div>
+                <span class="text-xl font-bold text-black tracking-wide">Recipe Reader</span>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Hamburger Menu -->
+                <div class="relative">
+                    <button id="hamburger-btn" class="p-2 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                    </button>
+                    <!-- Dropdown -->
+                    <div id="hamburger-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-xl shadow-lg py-1 z-50 transform origin-top-right transition-all">
+                        <a href="#" id="nav-btn-new" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors">Home</a>
+                        <a href="#" id="nav-btn-library" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors">Library</a>
+                        <a href="#" id="nav-btn-pantry" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors">Pantry</a>
+                        <div class="border-t border-gray-100 my-1"></div>
+                        <a href="#" id="settings-toggle" class="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-black transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <span>Settings</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
 
-    <div class="container">
+    <main class="main-content max-w-4xl mx-auto flex-grow w-full px-4">
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center p-3 bg-white border border-gray-100 rounded-2xl mb-4 shadow-xl">
+                <span style="font-size: 32px; line-height: 1;">🍳</span>
+            </div>
+            <h1 class="text-4xl font-extrabold text-black tracking-wide mb-2">Recipe Reader</h1>
+            <p class="text-gray-500 text-lg">Skip the life story, ads, and pop-ups. Just get the recipe.</p>
+        </div>
+
         
         <!-- View: Scrape New Recipe -->
         <div id="view-scrape" class="view-section">
             <header class="search-section no-print">
-                <h1 class="page-title">Save a Recipe</h1>
-                <p class="subtitle">Skip the life story, ads, and pop-ups. Just get the recipe.</p>
                 <form id="scrape-form" class="search-form">
                     <input type="url" id="url-input" placeholder="Paste recipe URL here..." required>
                     <button type="submit" id="submit-btn" class="primary-btn">Go</button>
@@ -118,6 +140,7 @@
                     <button class="dropdown-toggle" id="action-menu-btn">⋮ Actions</button>
                     <div class="dropdown-menu">
                         <button id="action-save" class="dropdown-item">💾 Save to Library</button>
+                        <button id="action-notion" class="dropdown-item">📓 Save to Notion</button>
                         <button id="action-print" class="dropdown-item">🖨️ Print Recipe</button>
                         <a id="action-source" href="#" target="_blank" class="dropdown-item">🔗 View Original</a>
                         <button id="action-delete" class="dropdown-item danger-item hidden">🗑️ Delete</button>
@@ -186,8 +209,51 @@
                 </div>
             </div>
         </main>
-    </div>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button id="close-settings" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-item">
+                        <label for="notion-token">Notion Secret Token</label>
+                        <input type="password" id="notion-token" placeholder="secret_...">
+                    </div>
+                    <div class="setting-item">
+                        <label for="notion-db">Notion Database URL</label>
+                        <input type="text" id="notion-db" placeholder="https://www.notion.so/...">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div id="settings-status" class="status-msg"></div>
+                    <button id="save-settings" class="save-btn primary-btn">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script src="/app.js?v=6"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const hamburgerBtn = document.getElementById('hamburger-btn');
+            const hamburgerDropdown = document.getElementById('hamburger-dropdown');
+            
+            if (hamburgerBtn && hamburgerDropdown) {
+                hamburgerBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    hamburgerDropdown.classList.toggle('hidden');
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!hamburgerBtn.contains(e.target) && !hamburgerDropdown.contains(e.target)) {
+                        hamburgerDropdown.classList.add('hidden');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

@@ -9,8 +9,7 @@
     --error-bg: #ffe4e4;
     --error-text: #d44c47;
     
-    --font-sans: 'Inter', -apple-system, sans-serif;
-    --font-serif: 'Lora', Georgia, serif;
+
 }
 
 * {
@@ -20,7 +19,7 @@
 }
 
 body {
-    font-family: var(--font-sans);
+
     background-color: var(--bg-color);
     color: var(--text-primary);
     line-height: 1.6;
@@ -28,46 +27,6 @@ body {
 }
 
 /* --- Nav --- */
-.navbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 2rem;
-    border-bottom: 1px solid var(--border-color);
-    background-color: #fff;
-}
-
-.nav-brand {
-    font-weight: 600;
-    font-size: 1.1rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.nav-links {
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-}
-
-.nav-btn {
-    background: none;
-    border: none;
-    font-size: 0.95rem;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-family: var(--font-sans);
-    padding: 0.4rem 0.8rem;
-    border-radius: 4px;
-    transition: background 0.1s;
-}
-
-.nav-btn:hover {
-    background-color: var(--surface-color);
-    color: var(--text-primary);
-}
 
 .primary-btn {
     border: none;
@@ -89,11 +48,6 @@ body {
 }
 
 /* --- Container & Views --- */
-.container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 3rem 1.5rem;
-}
 
 .hidden {
     display: none !important;
@@ -131,7 +85,7 @@ body {
     border-radius: 6px;
     background-color: #fff;
     color: var(--text-primary);
-    font-family: var(--font-sans);
+
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -195,7 +149,7 @@ body {
     border-radius: 6px;
     color: var(--text-primary);
     cursor: pointer;
-    font-family: var(--font-sans);
+
     transition: background 0.1s;
 }
 
@@ -238,7 +192,7 @@ body {
     color: var(--text-primary);
     cursor: pointer;
     text-decoration: none;
-    font-family: var(--font-sans);
+
 }
 
 .dropdown-item:hover {
@@ -453,7 +407,6 @@ body {
 
 /* --- Responsive --- */
 @media (max-width: 600px) {
-    .container { padding: 2rem 1rem; }
     .search-form { flex-direction: column; }
     .recipe-meta { gap: 1rem; }
 }
@@ -461,7 +414,6 @@ body {
 /* --- Print --- */
 @media print {
     body { background-color: #fff; color: #000; font-size: 11pt; }
-    .container { padding: 0; margin: 0; max-width: 100%; }
     .no-print { display: none !important; }
     .recipe-header { border-bottom: 1px solid #000; align-items: center; }
     .image-container { max-width: 200px; border: none; }
@@ -608,7 +560,6 @@ body {
 .cloud-title {
     margin-top: 0;
     margin-bottom: 1rem;
-    font-family: 'Lora', serif;
     color: var(--text-color);
     font-size: 1.2rem;
 }
@@ -652,7 +603,7 @@ body {
     border-bottom: 3px solid transparent;
     margin-bottom: -1px;
     transition: all 0.2s;
-    font-family: var(--font-sans);
+
 }
 .tab-btn:hover {
     color: var(--text-primary);
@@ -697,3 +648,83 @@ body {
     font-size: 1.1rem;
     padding: 0.2rem 0;
 }
+
+/* --- Modal --- */
+.modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal.hidden {
+    display: none !important;
+}
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+    line-height: 1;
+}
+.close-btn:hover {
+    color: var(--text-primary);
+}
+.modal-body {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.setting-item label {
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+.setting-item input {
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 1rem;
+}
+.modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.status-msg {
+    font-size: 0.9rem;
+}
+.status-msg.success { color: #2e7d32; }
+.status-msg.error { color: var(--error-text); }

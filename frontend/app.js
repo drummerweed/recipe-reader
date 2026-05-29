@@ -25,6 +25,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const actionPrint = document.getElementById('action-print');
     const actionSource = document.getElementById('action-source');
     const actionDelete = document.getElementById('action-delete');
+    const actionNotion = document.getElementById('action-notion');
+
+    // Settings Modal
+    const settingsToggle = document.getElementById('settings-toggle');
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettings = document.getElementById('close-settings');
+    const saveSettings = document.getElementById('save-settings');
+    const notionToken = document.getElementById('notion-token');
+    const notionDb = document.getElementById('notion-db');
+    const settingsStatus = document.getElementById('settings-status');
 
     // Reader Elements
     const elCategory = document.getElementById('recipe-category');
@@ -101,6 +111,101 @@ document.addEventListener('DOMContentLoaded', () => {
         actionMenu.classList.remove('show');
         window.print();
     });
+
+    // --- SETTINGS ---
+    if (settingsToggle) {
+        settingsToggle.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const hamburgerDropdown = document.getElementById('hamburger-dropdown');
+            if (hamburgerDropdown) hamburgerDropdown.classList.add('hidden');
+            
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                if (data.success) {
+                    notionToken.value = data.notion_token || '';
+                    notionDb.value = data.notion_db_url || '';
+                }
+            } catch (err) {
+                console.error("Could not load settings", err);
+            }
+            
+            settingsStatus.textContent = '';
+            settingsModal.classList.remove('hidden');
+        });
+    }
+
+    if (closeSettings) {
+        closeSettings.addEventListener('click', () => {
+            settingsModal.classList.add('hidden');
+        });
+    }
+
+    if (saveSettings) {
+        saveSettings.addEventListener('click', async () => {
+            saveSettings.disabled = true;
+            settingsStatus.textContent = 'Saving...';
+            settingsStatus.className = 'status-msg';
+            
+            try {
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        notion_token: notionToken.value.trim(),
+                        notion_db_url: notionDb.value.trim()
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    settingsStatus.textContent = 'Settings saved!';
+                    settingsStatus.classList.add('success');
+                    setTimeout(() => {
+                        settingsModal.classList.add('hidden');
+                    }, 1000);
+                } else {
+                    throw new Error(data.error || "Failed to save");
+                }
+            } catch (err) {
+                settingsStatus.textContent = err.message;
+                settingsStatus.classList.add('error');
+            } finally {
+                saveSettings.disabled = false;
+            }
+        });
+    }
+
+    // --- SAVE TO NOTION ---
+    if (actionNotion) {
+        actionNotion.addEventListener('click', async () => {
+            if (!currentViewedId) {
+                alert("Please save the recipe to your library first!");
+                return;
+            }
+            
+            actionNotion.textContent = 'Saving...';
+            actionNotion.disabled = true;
+            
+            try {
+                const res = await fetch(`/api/recipes/${currentViewedId}/notion`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert("Successfully saved to Notion!");
+                    actionMenu.classList.remove('show');
+                } else {
+                    throw new Error(data.error || "Failed to save to Notion");
+                }
+            } catch (err) {
+                alert("Notion Error: " + err.message);
+            } finally {
+                actionNotion.textContent = '📓 Save to Notion';
+                actionNotion.disabled = false;
+            }
+        });
+    }
 
     // --- SCRAPING ---
     form.addEventListener('submit', async (e) => {

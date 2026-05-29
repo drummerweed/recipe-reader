@@ -84,3 +84,9 @@ class SearchWord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     word = db.Column(db.String(100), nullable=False, unique=True)
     count = db.Column(db.Integer, default=1)
+
+class Settings(db.Model):
+    __tablename__ = 'settings'
+    id = db.Column(db.Integer, primary_key=True)
+    notion_token = db.Column(db.String(500), nullable=True)
+    notion_db_url = db.Column(db.String(500), nullable=True)
